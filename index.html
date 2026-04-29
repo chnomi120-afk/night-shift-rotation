@@ -1,152 +1,401 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Night Shift Rotation System</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Night Shift Rotation - Editable</title>
   <style>
+    * { box-sizing: border-box; }
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
       background: #0f172a;
-      color: white;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
+      color: #ffffff;
+      padding: 14px;
     }
-    h1 { color: #38bdf8; }
+    h1, h2, h3 { margin: 10px 0; }
+    h1 { color: #38bdf8; font-size: 24px; text-align: center; }
     .card {
       background: #1e293b;
-      padding: 20px;
-      margin: 15px auto;
-      border-radius: 12px;
-      max-width: 700px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 14px;
+      margin: 12px auto;
+      max-width: 1100px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
     }
-    .big {
-      font-size: 1.4rem;
-      margin: 10px 0;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 10px;
+    }
+    label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 5px; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: white;
+      font-size: 15px;
     }
     button {
-      background: #38bdf8;
-      border: none;
-      padding: 12px 20px;
-      margin: 8px;
-      border-radius: 8px;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 6px 4px;
+      font-size: 15px;
+      font-weight: bold;
       cursor: pointer;
-      font-size: 1rem;
+      background: #38bdf8;
+      color: #06111f;
     }
-    button:hover { background: #0ea5e9; }
+    button.secondary { background: #64748b; color: #fff; }
+    button.danger { background: #ef4444; color: #fff; }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
+      margin-top: 10px;
+      overflow-x: auto;
     }
     th, td {
       border: 1px solid #334155;
-      padding: 10px;
+      padding: 9px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
     }
-    th { background: #334155; }
+    th { background: #334155; color: #e2e8f0; }
+    .small { font-size: 13px; color: #cbd5e1; }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #334155;
+      margin: 2px;
+      font-size: 13px;
+    }
+    .parking { background: #facc15; color: #111827; font-weight: bold; }
+    .activeBox {
+      border: 2px solid #38bdf8;
+      background: #082f49;
+    }
+    .notice {
+      background: #14532d;
+      border: 1px solid #22c55e;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 8px;
+    }
+    @media (max-width: 600px) {
+      body { padding: 8px; }
+      h1 { font-size: 20px; }
+      th, td { font-size: 12px; padding: 6px; }
+      button { width: 100%; margin: 5px 0; }
+    }
   </style>
 </head>
-<body><h1>Night Shift Rotation Dashboard</h1>
-<p>Shift Time: 19:00 - 07:00</p><div class="card">
-  <div class="big" id="currentTime"></div>
-  <div class="big">Current Parking Staff:</div>
-  <div id="parkingStaff" class="big"></div>
-  <div class="big">Next Rotation In:</div>
-  <div id="countdown" class="big"></div>
-</div><div class="card">
-  <h2>Workers</h2>
-  <p>Edit names below in code if needed</p>
-  <table id="workerTable">
-    <thead>
-      <tr><th>Worker</th><th>Status</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div><script>
-  const workers = [
-    "Worker 1", "Worker 2", "Worker 3", "Worker 4",
-    "Worker 5", "Worker 6", "Worker 7", "Worker 8",
-    "Worker 9", "Worker 10", "Worker 11", "Worker 12"
-  ];
+<body>
+  <h1>Night Shift Rotation Dashboard</h1>
 
-  // Add old workers here who should skip parking
-  const exemptWorkers = [
-    "Worker 11"
-  ];
+  <div class="card">
+    <h2>Shift Rules</h2>
+    <p class="small">
+      First parking slot is <b>19:00–22:00</b>. After 22:00, parking changes every 2 hours until 07:00.
+      Mark older/exempt people as <b>Yes</b>, and they will not be sent to Parking.
+    </p>
+    <div id="liveClock" class="notice"></div>
+  </div>
 
-  let eligibleWorkers = workers.filter(w => !exemptWorkers.includes(w));
+  <div class="card">
+    <h2>Supervisors</h2>
+    <div class="grid">
+      <div>
+        <label>Supervisor 1</label>
+        <input id="sup1" placeholder="Supervisor 1 name" />
+      </div>
+      <div>
+        <label>Supervisor 2</label>
+        <input id="sup2" placeholder="Supervisor 2 name" />
+      </div>
+    </div>
+  </div>
 
-  const rotationSlots = [
-    { start: 19, duration: 3 },
-    { start: 22, duration: 2 },
-    { start: 24, duration: 2 },
-    { start: 2, duration: 2 },
-    { start: 4, duration: 2 },
-    { start: 6, duration: 1 }
-  ];
+  <div class="card">
+    <h2>Daily Workers - Editable</h2>
+    <p class="small">Enter 12 worker names. Select starting location. Select old/exempt = Yes if they should not go to Parking.</p>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Worker Name</th>
+            <th>Starting Location</th>
+            <th>Old/Exempt from Parking?</th>
+          </tr>
+        </thead>
+        <tbody id="workerInputs"></tbody>
+      </table>
+    </div>
 
-  function getCurrentHour() {
-    const now = new Date();
-    return now.getHours() + now.getMinutes()/60;
+    <button onclick="generateRotation()">Generate Rotation</button>
+    <button class="secondary" onclick="saveData()">Save Names</button>
+    <button class="secondary" onclick="loadData()">Load Saved</button>
+    <button class="danger" onclick="clearSaved()">Clear Saved</button>
+  </div>
+
+  <div class="card activeBox">
+    <h2>Current Slot</h2>
+    <div id="currentSlot"></div>
+  </div>
+
+  <div class="card">
+    <h2>Full Night Rotation</h2>
+    <div id="rotationOutput" style="overflow-x:auto;"></div>
+  </div>
+
+<script>
+const locations = [
+  { name: "Sirocco A", count: 2 },
+  { name: "Sirocco B", count: 3 },
+  { name: "Mistral A", count: 2 },
+  { name: "Mistral B", count: 2 },
+  { name: "Reception", count: 1 },
+  { name: "Parking", count: 2 }
+];
+
+const slots = [
+  "19:00–22:00",
+  "22:00–00:00",
+  "00:00–02:00",
+  "02:00–04:00",
+  "04:00–06:00",
+  "06:00–07:00"
+];
+
+const defaultStart = [
+  "Sirocco A", "Sirocco A",
+  "Sirocco B", "Sirocco B", "Sirocco B",
+  "Mistral A", "Mistral A",
+  "Mistral B", "Mistral B",
+  "Reception",
+  "Parking", "Parking"
+];
+
+function makeInputs() {
+  const tbody = document.getElementById("workerInputs");
+  tbody.innerHTML = "";
+  for (let i = 0; i < 12; i++) {
+    const tr = document.createElement("tr");
+    const options = locations.map(l =>
+      `<option value="${l.name}" ${defaultStart[i] === l.name ? "selected" : ""}>${l.name}</option>`
+    ).join("");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td><input id="w${i}" placeholder="Worker ${i + 1}" value="Worker ${i + 1}"></td>
+      <td><select id="loc${i}">${options}</select></td>
+      <td>
+        <select id="ex${i}">
+          <option value="No" selected>No</option>
+          <option value="Yes">Yes</option>
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
   }
+}
 
-  function getRotationIndex(hour) {
-    if (hour >= 19 && hour < 22) return 0;
-    if (hour >= 22 || hour < 0) return 1;
-    if (hour >= 0 && hour < 2) return 2;
-    if (hour >= 2 && hour < 4) return 3;
-    if (hour >= 4 && hour < 6) return 4;
-    return 5;
-  }
-
-  function updateDashboard() {
-    const now = new Date();
-    let hour = now.getHours();
-    let minute = now.getMinutes();
-
-    document.getElementById("currentTime").innerText =
-      `Current Time: ${now.toLocaleTimeString()}`;
-
-    let index = getRotationIndex(hour);
-    let worker1 = eligibleWorkers[(index * 2) % eligibleWorkers.length];
-    let worker2 = eligibleWorkers[(index * 2 + 1) % eligibleWorkers.length];
-
-    document.getElementById("parkingStaff").innerText = `${worker1} + ${worker2}`;
-
-    let nextRotation = new Date(now);
-    if (hour >= 19 && hour < 22) {
-      nextRotation.setHours(22,0,0,0);
-    } else if (hour >= 22) {
-      nextRotation.setHours(hour + (2 - (hour % 2)), 0, 0, 0);
-    } else {
-      nextRotation.setHours(hour + (2 - (hour % 2)), 0, 0, 0);
-    }
-
-    let diff = nextRotation - now;
-    let hrs = Math.floor(diff / (1000 * 60 * 60));
-    let mins = Math.floor((diff / (1000 * 60)) % 60);
-    let secs = Math.floor((diff / 1000) % 60);
-
-    document.getElementById("countdown").innerText =
-      `${hrs}h ${mins}m ${secs}s`;
-
-    if (mins === 0 && secs === 0) {
-      alert(`Rotation Time! Send ${worker1} and ${worker2} to Parking.`);
-    }
-  }
-
-  function loadWorkers() {
-    const tbody = document.querySelector("#workerTable tbody");
-    workers.forEach(worker => {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${worker}</td><td>${exemptWorkers.includes(worker) ? "Exempt" : "Active"}</td>`;
-      tbody.appendChild(row);
+function getWorkers() {
+  const workers = [];
+  for (let i = 0; i < 12; i++) {
+    workers.push({
+      name: document.getElementById("w" + i).value.trim() || ("Worker " + (i + 1)),
+      start: document.getElementById("loc" + i).value,
+      exempt: document.getElementById("ex" + i).value === "Yes"
     });
   }
+  return workers;
+}
 
-  loadWorkers();
-  updateDashboard();
-  setInterval(updateDashboard, 1000);
-</script></body>
+function saveData() {
+  const data = {
+    sup1: document.getElementById("sup1").value,
+    sup2: document.getElementById("sup2").value,
+    workers: getWorkers()
+  };
+  localStorage.setItem("nightShiftRotationData", JSON.stringify(data));
+  alert("Saved on this phone/browser.");
+}
+
+function loadData() {
+  const saved = localStorage.getItem("nightShiftRotationData");
+  if (!saved) {
+    alert("No saved data found.");
+    return;
+  }
+  const data = JSON.parse(saved);
+  document.getElementById("sup1").value = data.sup1 || "";
+  document.getElementById("sup2").value = data.sup2 || "";
+  if (data.workers) {
+    data.workers.forEach((w, i) => {
+      if (document.getElementById("w" + i)) {
+        document.getElementById("w" + i).value = w.name || "";
+        document.getElementById("loc" + i).value = w.start || defaultStart[i];
+        document.getElementById("ex" + i).value = w.exempt ? "Yes" : "No";
+      }
+    });
+  }
+  generateRotation();
+}
+
+function clearSaved() {
+  localStorage.removeItem("nightShiftRotationData");
+  alert("Saved data cleared.");
+}
+
+function buildInitialMap(workers) {
+  const map = {};
+  locations.forEach(l => map[l.name] = []);
+  workers.forEach(w => map[w.start].push(w));
+  return map;
+}
+
+function flattenNonParking(map) {
+  let arr = [];
+  ["Sirocco A", "Sirocco B", "Mistral A", "Mistral B", "Reception"].forEach(loc => {
+    arr = arr.concat(map[loc]);
+  });
+  return arr;
+}
+
+function assignInside(workerList) {
+  const map = {};
+  locations.forEach(l => map[l.name] = []);
+  let index = 0;
+  ["Sirocco A", "Sirocco B", "Mistral A", "Mistral B", "Reception"].forEach(loc => {
+    const needed = locations.find(l => l.name === loc).count;
+    for (let i = 0; i < needed; i++) {
+      if (workerList[index]) map[loc].push(workerList[index]);
+      index++;
+    }
+  });
+  return map;
+}
+
+function generateRotation() {
+  const workers = getWorkers();
+  const supervisors = [
+    document.getElementById("sup1").value.trim() || "Supervisor 1",
+    document.getElementById("sup2").value.trim() || "Supervisor 2"
+  ];
+
+  let currentMap = buildInitialMap(workers);
+  const schedules = [];
+
+  for (let s = 0; s < slots.length; s++) {
+    if (s === 0) {
+      schedules.push(JSON.parse(JSON.stringify(currentMap)));
+      continue;
+    }
+
+    const insideWorkers = flattenNonParking(currentMap);
+    const parkingWorkers = currentMap["Parking"];
+
+    const eligibleInside = insideWorkers.filter(w => !w.exempt);
+    let nextParking = eligibleInside.slice(0, 2);
+
+    if (nextParking.length < 2) {
+      const extra = insideWorkers.filter(w => !nextParking.includes(w)).slice(0, 2 - nextParking.length);
+      nextParking = nextParking.concat(extra);
+    }
+
+    let remainingInside = insideWorkers.filter(w => !nextParking.includes(w));
+    remainingInside = remainingInside.concat(parkingWorkers);
+
+    // Rotate inside positions: move first person to end so people change building
+    if (remainingInside.length > 1) {
+      const first = remainingInside.shift();
+      remainingInside.push(first);
+    }
+
+    currentMap = assignInside(remainingInside);
+    currentMap["Parking"] = nextParking;
+
+    schedules.push(JSON.parse(JSON.stringify(currentMap)));
+  }
+
+  renderRotation(schedules, supervisors);
+}
+
+function renderRotation(schedules, supervisors) {
+  let html = `<p><b>Supervisors:</b> ${supervisors.join(" + ")} <br><span class="small">Supervisors are floating and not assigned to buildings.</span></p>`;
+  html += `<table><thead><tr><th>Time</th>`;
+  locations.forEach(l => html += `<th>${l.name}</th>`);
+  html += `</tr></thead><tbody>`;
+
+  schedules.forEach((map, index) => {
+    html += `<tr><td><b>${slots[index]}</b></td>`;
+    locations.forEach(l => {
+      const people = (map[l.name] || []).map(w => {
+        const ex = w.exempt ? " (Exempt)" : "";
+        const cls = l.name === "Parking" ? "badge parking" : "badge";
+        return `<span class="${cls}">${w.name}${ex}</span>`;
+      }).join(" ");
+      html += `<td>${people || "-"}</td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("rotationOutput").innerHTML = html;
+  updateCurrentSlot(schedules, supervisors);
+}
+
+function getCurrentSlotIndex() {
+  const now = new Date();
+  const h = now.getHours();
+  if (h >= 19 && h < 22) return 0;
+  if (h >= 22 || h < 0) return 1;
+  if (h >= 0 && h < 2) return 2;
+  if (h >= 2 && h < 4) return 3;
+  if (h >= 4 && h < 6) return 4;
+  if (h >= 6 && h < 7) return 5;
+  return -1;
+}
+
+function updateCurrentSlot(schedules, supervisors) {
+  const idx = getCurrentSlotIndex();
+  const box = document.getElementById("currentSlot");
+
+  if (idx === -1) {
+    box.innerHTML = "Shift is not active right now. Shift time is 19:00–07:00.";
+    return;
+  }
+
+  const map = schedules[idx];
+  let html = `<h3>${slots[idx]}</h3>`;
+  html += `<p><b>Parking now:</b> ${(map["Parking"] || []).map(w => w.name).join(" + ")}</p>`;
+  html += `<p><b>Supervisors:</b> ${supervisors.join(" + ")}</p>`;
+  html += `<table><thead><tr><th>Location</th><th>Workers Now</th></tr></thead><tbody>`;
+  locations.forEach(l => {
+    html += `<tr><td>${l.name}</td><td>${(map[l.name] || []).map(w => w.name + (w.exempt ? " (Exempt)" : "")).join(", ") || "-"}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  box.innerHTML = html;
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById("liveClock").innerHTML =
+    `<b>Current time:</b> ${now.toLocaleTimeString()}<br><span class="small">After editing names, press Generate Rotation.</span>`;
+}
+
+makeInputs();
+loadData();
+generateRotation();
+updateClock();
+setInterval(updateClock, 1000);
+setInterval(generateRotation, 60000);
+</script>
+</body>
 </html>
