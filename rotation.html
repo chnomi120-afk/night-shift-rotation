@@ -1,0 +1,152 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Night Shift Rotation System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 { color: #38bdf8; }
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      margin: 15px auto;
+      border-radius: 12px;
+      max-width: 700px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .big {
+      font-size: 1.4rem;
+      margin: 10px 0;
+    }
+    button {
+      background: #38bdf8;
+      border: none;
+      padding: 12px 20px;
+      margin: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover { background: #0ea5e9; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #334155;
+      padding: 10px;
+    }
+    th { background: #334155; }
+  </style>
+</head>
+<body><h1>Night Shift Rotation Dashboard</h1>
+<p>Shift Time: 19:00 - 07:00</p><div class="card">
+  <div class="big" id="currentTime"></div>
+  <div class="big">Current Parking Staff:</div>
+  <div id="parkingStaff" class="big"></div>
+  <div class="big">Next Rotation In:</div>
+  <div id="countdown" class="big"></div>
+</div><div class="card">
+  <h2>Workers</h2>
+  <p>Edit names below in code if needed</p>
+  <table id="workerTable">
+    <thead>
+      <tr><th>Worker</th><th>Status</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div><script>
+  const workers = [
+    "Worker 1", "Worker 2", "Worker 3", "Worker 4",
+    "Worker 5", "Worker 6", "Worker 7", "Worker 8",
+    "Worker 9", "Worker 10", "Worker 11", "Worker 12"
+  ];
+
+  // Add old workers here who should skip parking
+  const exemptWorkers = [
+    "Worker 11"
+  ];
+
+  let eligibleWorkers = workers.filter(w => !exemptWorkers.includes(w));
+
+  const rotationSlots = [
+    { start: 19, duration: 3 },
+    { start: 22, duration: 2 },
+    { start: 24, duration: 2 },
+    { start: 2, duration: 2 },
+    { start: 4, duration: 2 },
+    { start: 6, duration: 1 }
+  ];
+
+  function getCurrentHour() {
+    const now = new Date();
+    return now.getHours() + now.getMinutes()/60;
+  }
+
+  function getRotationIndex(hour) {
+    if (hour >= 19 && hour < 22) return 0;
+    if (hour >= 22 || hour < 0) return 1;
+    if (hour >= 0 && hour < 2) return 2;
+    if (hour >= 2 && hour < 4) return 3;
+    if (hour >= 4 && hour < 6) return 4;
+    return 5;
+  }
+
+  function updateDashboard() {
+    const now = new Date();
+    let hour = now.getHours();
+    let minute = now.getMinutes();
+
+    document.getElementById("currentTime").innerText =
+      `Current Time: ${now.toLocaleTimeString()}`;
+
+    let index = getRotationIndex(hour);
+    let worker1 = eligibleWorkers[(index * 2) % eligibleWorkers.length];
+    let worker2 = eligibleWorkers[(index * 2 + 1) % eligibleWorkers.length];
+
+    document.getElementById("parkingStaff").innerText = `${worker1} + ${worker2}`;
+
+    let nextRotation = new Date(now);
+    if (hour >= 19 && hour < 22) {
+      nextRotation.setHours(22,0,0,0);
+    } else if (hour >= 22) {
+      nextRotation.setHours(hour + (2 - (hour % 2)), 0, 0, 0);
+    } else {
+      nextRotation.setHours(hour + (2 - (hour % 2)), 0, 0, 0);
+    }
+
+    let diff = nextRotation - now;
+    let hrs = Math.floor(diff / (1000 * 60 * 60));
+    let mins = Math.floor((diff / (1000 * 60)) % 60);
+    let secs = Math.floor((diff / 1000) % 60);
+
+    document.getElementById("countdown").innerText =
+      `${hrs}h ${mins}m ${secs}s`;
+
+    if (mins === 0 && secs === 0) {
+      alert(`Rotation Time! Send ${worker1} and ${worker2} to Parking.`);
+    }
+  }
+
+  function loadWorkers() {
+    const tbody = document.querySelector("#workerTable tbody");
+    workers.forEach(worker => {
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${worker}</td><td>${exemptWorkers.includes(worker) ? "Exempt" : "Active"}</td>`;
+      tbody.appendChild(row);
+    });
+  }
+
+  loadWorkers();
+  updateDashboard();
+  setInterval(updateDashboard, 1000);
+</script></body>
+</html>
